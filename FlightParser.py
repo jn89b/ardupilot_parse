@@ -78,6 +78,7 @@ if __name__ == "__main__":
     """
     Some useful information about the types:
     NTUN (navigation information) -> provides 
+    
     """
     desired_data: Dict[str, pd.DataFrame] = flight_parser.get_desired_data(
         types=["GPS", "NTUN", "CMD", "MODE", "IMU", "ATT", "AHR2"])
