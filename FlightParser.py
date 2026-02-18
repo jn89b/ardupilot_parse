@@ -241,9 +241,9 @@ class FlightParser:
             vz = self._safe_get(gps_i.loc[i], ["VZ", "VelZ", "Vz"], default=0.0)
 
             # Get EKF NED velocity (preferred)
-            vn = self._safe_get(nkf_i.loc[i], ["VN", "VelN"], default=np.nan)
-            ve = self._safe_get(nkf_i.loc[i], ["VE", "VelE"], default=np.nan)
-            vd = self._safe_get(nkf_i.loc[i], ["VD", "VelD"], default=np.nan)
+            vn = self._safe_get(nkf_i.loc[i], ["VN", "VelN"], default=0.0)
+            ve = self._safe_get(nkf_i.loc[i], ["VE", "VelE"], default=0.0)
+            vd = self._safe_get(nkf_i.loc[i], ["VD", "VelD"], default=0.0)
 
             # If VN/VE/VD are missing, do NOT compute body velocities (set NaN)
             if any(map(lambda x: not pd.notna(x), [vn, ve, vd])):
