@@ -39,7 +39,7 @@ def main():
     ap.add_argument("--out_dir", type=str, default="data/json_out", help="Output directory for batch mode")
 
     ap.add_argument("--dt", type=float, default=0.05, help="Output sample period (seconds)")
-    ap.add_argument("--slice_seconds", type=float, default=None,
+    ap.add_argument("--slice_seconds", type=float, default=60,
                     help="If set, split output into multiple JSONs each covering this many seconds (e.g. 60)")
 
     ap.add_argument("--workers", type=int, default=8, help="Number of processes for batch mode")
