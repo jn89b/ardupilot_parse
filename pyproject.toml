@@ -1,0 +1,20 @@
+[project]
+name = "ardupilot-parse"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "pymavlink>=2.4.49",
+    "seaborn>=0.13.2",
+]
+
+[project.scripts]
+ardupilot-parse = "ardupilot_parse:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
