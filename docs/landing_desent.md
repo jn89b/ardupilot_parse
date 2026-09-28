@@ -75,7 +75,7 @@ This analyzes the final descent below `100 m` relative altitude.
 ## Useful Options
 
 ```bash
-python cache_landing_descents.py \
+uv run cache_landing_descents.py \
     --final-only \
     --max-altitude 100 \
     --min-descent-rate 0.25 \
