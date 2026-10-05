@@ -52,6 +52,7 @@ import json
 import math
 import os
 import traceback
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -1090,19 +1091,63 @@ def run_dataset(
     labels: Sequence[str],
     cfg: ExtractionConfig,
     verbose: bool = False,
+    workers: int = 1,
 ) -> pd.DataFrame:
     output_root.mkdir(parents=True, exist_ok=True)
 
-    all_manifest: List[Dict[str, Any]] = []
-    errors: List[Dict[str, str]] = []
-
+    jobs: List[Tuple[str, Path]] = []
     for label in labels:
         logs = find_bin_files(input_root, label)
         print(f"{label}: found {len(logs)} BIN file(s)")
+        jobs.extend((label, log_path) for log_path in logs)
 
-        for i, log_path in enumerate(logs, start=1):
-            print(f"  [{i}/{len(logs)}] {log_path.name}")
+    all_manifest: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    done = 0
 
+    def record_result(label: str, log_path: Path, records, exc: Optional[BaseException], tb: str) -> None:
+        nonlocal done
+        done += 1
+        print(f"  [{done}/{len(jobs)}] {log_path.name}")
+        if exc is not None:
+            print(f"      ERROR: {exc}")
+            errors.append(
+                {
+                    "label": label,
+                    "log_path": str(log_path),
+                    "error": str(exc),
+                    "traceback": tb,
+                }
+            )
+            return
+        all_manifest.extend(records)
+        if not records:
+            print("      no qualifying descent found")
+
+    if workers > 1 and len(jobs) > 1:
+        # One process per log: read_messages is a pure-Python DFReader loop, so
+        # the GIL makes threads useless here. Logs are independent and each
+        # worker writes its own cache files, so nothing is shared.
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            futures = {
+                ex.submit(
+                    process_log,
+                    log_path=log_path,
+                    label=label,
+                    output_root=output_root,
+                    cfg=cfg,
+                    verbose=verbose,
+                ): (label, log_path)
+                for label, log_path in jobs
+            }
+            for fut in as_completed(futures):
+                label, log_path = futures[fut]
+                try:
+                    record_result(label, log_path, fut.result(), None, "")
+                except Exception as exc:
+                    record_result(label, log_path, None, exc, traceback.format_exc())
+    else:
+        for label, log_path in jobs:
             try:
                 records = process_log(
                     log_path=log_path,
@@ -1111,23 +1156,16 @@ def run_dataset(
                     cfg=cfg,
                     verbose=verbose,
                 )
-                all_manifest.extend(records)
-
-                if not records:
-                    print("      no qualifying descent found")
-
+                record_result(label, log_path, records, None, "")
             except Exception as exc:
-                print(f"      ERROR: {exc}")
-                errors.append(
-                    {
-                        "label": label,
-                        "log_path": str(log_path),
-                        "error": str(exc),
-                        "traceback": traceback.format_exc(),
-                    }
-                )
+                record_result(label, log_path, None, exc, traceback.format_exc())
 
     manifest = pd.DataFrame(all_manifest)
+    if not manifest.empty:
+        # Workers finish out of order; keep the manifest deterministic.
+        manifest = manifest.sort_values(
+            ["label", "log_file", "descent_index"]
+        ).reset_index(drop=True)
     manifest_path = output_root / "manifest.csv"
     manifest.to_csv(manifest_path, index=False)
 
@@ -1233,6 +1271,16 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--throttle-channel", type=int, default=DEFAULT_THROTTLE_CH)
     p.add_argument("--yaw-channel", type=int, default=DEFAULT_YAW_CH)
 
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=min(4, os.cpu_count() or 1),
+        help=(
+            "Parallel worker processes, one log per worker. "
+            "Each worker holds a whole log in memory, so lower this if you "
+            "run out of RAM on large BIN files; 1 disables the pool."
+        ),
+    )
     p.add_argument("--verbose", action="store_true")
     return p.parse_args()
 
@@ -1263,6 +1311,7 @@ def main() -> None:
         labels=args.labels,
         cfg=cfg,
         verbose=args.verbose,
+        workers=args.workers,
     )
 
 
