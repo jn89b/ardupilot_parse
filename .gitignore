@@ -6,6 +6,10 @@ __pycache__/
 *.pkl
 data/landings/*
 *.json
+*.zip
+
+data/landing_analysis/*
+data/landing_cache/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
