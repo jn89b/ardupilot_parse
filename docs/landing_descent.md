@@ -88,6 +88,7 @@ uv run cache_landing_descents.py \
 
 | Argument             | Description                                               |
 | -------------------- | --------------------------------------------------------- |
+| `--dt`               | Cache time-grid interval in seconds (default `0.05`, or 20 Hz) |
 | `--max-altitude`     | Maximum relative altitude to consider part of the landing |
 | `--min-descent-rate` | Minimum descent rate in m/s                               |
 | `--min-duration`     | Minimum descent duration in seconds                       |
@@ -96,6 +97,11 @@ uv run cache_landing_descents.py \
 | `--pad-before`       | Keep additional seconds before detected descent           |
 | `--pad-after`        | Keep additional seconds after descent                     |
 | `--final-only`       | Only cache the final descent from each flight             |
+
+Cached data is aligned to a regular time grid with a default interval of
+`0.05` seconds (20 Hz). Change the interval with `--dt`; for example,
+`--dt 0.1` produces a 10 Hz grid. Source messages are aligned to the nearest
+grid time, so individual fields may have different native logging rates.
 
 ## Output
 
